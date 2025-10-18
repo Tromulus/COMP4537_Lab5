@@ -1,9 +1,8 @@
-// server.js — minimal, no Express, no CORS
 const http = require('http');
 const { URL } = require('url');
 const mysql = require('mysql2/promise');
+const MESSAGES = require('./messages')
 
-// Reads creds from env (set these in Railway Node service)
 const DB_HOST = process.env.DB_HOST || '127.0.0.1';
 const DB_USER = process.env.DB_USER || 'root';
 const DB_PASS = process.env.DB_PASS || '';
@@ -13,7 +12,6 @@ const DB_PORT = +(process.env.DB_PORT || 3306);
 let pool;
 
 async function initDB() {
-  // Create DB if missing (works with Railway internal/public)
     const bootstrap = await mysql.createConnection({ 
         host: DB_HOST, 
         user: DB_USER, 
@@ -60,7 +58,7 @@ const server = http.createServer(async (req, res) => {
         const body = JSON.parse(await readBody(req) || '{}');
         if (!body.name || !body.dateOfBirth) {
             res.writeHead(400);
-            return res.end(JSON.stringify({ error: 'Missing name or dateOfBirth' }));
+            return res.end(JSON.stringify({ error: MESSAGES.missingData }));
         }
         const [r] = await pool.execute(
             'INSERT INTO patient (name, dateOfBirth) VALUES (?, ?)',
@@ -70,7 +68,7 @@ const server = http.createServer(async (req, res) => {
         return res.end(JSON.stringify({ ok: true, id: r.insertId }));
         }
 
-        res.writeHead(404); res.end(JSON.stringify({ error: 'Not found' }));
+        res.writeHead(404); res.end(JSON.stringify({ error: MESSAGES.notFound }));
     } catch (e) {
         res.writeHead(500); res.end(JSON.stringify({ error: e.message }));
     }
@@ -78,6 +76,6 @@ const server = http.createServer(async (req, res) => {
 
 (async () => {
     await initDB();
-    const PORT = process.env.PORT || 3001; // Railway sets PORT automatically
-    server.listen(PORT, () => console.log('Server on :' + PORT));
+    const PORT = process.env.PORT || 3001;
+    server.listen(PORT, () => console.log('Server on listening on port:' + PORT));
 })();
